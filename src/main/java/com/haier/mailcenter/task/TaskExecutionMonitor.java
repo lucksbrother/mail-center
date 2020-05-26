@@ -48,6 +48,9 @@ public class TaskExecutionMonitor extends MailSenderTemplate implements Applicat
                 }
                 Thread.sleep(500);
             } else {
+                //TODO 增加逻辑，如果开关为关闭状态，将当前队列中的MailTask，根据模版规则条件，
+                // 非抛弃型任务持久化到Mysql中，抛弃型任务记录Log日志后扔掉
+
                 for (int i = 6; i > 0; i--) {
                     log.info("当前总开关为关闭状态，休眠线" + i + "0秒");
                     Thread.sleep(10000);
