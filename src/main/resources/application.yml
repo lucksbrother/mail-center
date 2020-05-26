@@ -1,0 +1,10 @@
+spring:
+  # IDENTITY
+  application:
+    name: mail-center
+  # PROFILES
+  profiles:
+    active: dev
+  # 关闭模版位置检查
+  freemarker:
+    check-template-location: false

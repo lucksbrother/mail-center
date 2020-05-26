@@ -1,0 +1,3 @@
+insert into CLIENT_INFO values (1, 'test', '123','test@haier.com','https://test.com','2020-05-21 20:20:20','wang','2020-05-21 21:21:21','bin',1 );
+insert into BLACK_LIST values (1, 1, '456@haier.com', 'test','1','2020-05-21 20:20:20','wang','2020-05-21 21:21:21','bin',1 );
+insert into MAIL_TEMPLATE values (1,1, 'live', '<div><p>${name!}:</p><p>&nbsp; &nbsp; 您好！诚挚邀请您参加直播课程 ${course!}，我们期待您的参与！</p><p>&nbsp; &nbsp; 直播时间：${time!} 直播导师：${teacher!}</p><p>&nbsp; &nbsp; 我们和您不见不散！</p><p style="text-align: right;">海尔智家生态平台</p></div>','name,course,time,teacher','2020-05-21 20:20:20','wang','2020-05-21 21:21:21','bin',1 );
