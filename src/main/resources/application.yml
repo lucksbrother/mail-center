@@ -4,7 +4,7 @@ spring:
     name: mail-center
   # PROFILES
   profiles:
-    active: dev
+    active: test
   # 关闭模版位置检查
   freemarker:
     check-template-location: false

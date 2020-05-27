@@ -4,6 +4,7 @@ import com.haier.mailcenter.common.ResponseMap;
 import com.haier.mailcenter.dto.SendMailDto;
 import com.haier.mailcenter.model.MailSendTask;
 import com.haier.mailcenter.service.MailTaskQueueService;
+import com.haier.mailcenter.service.MailTaskQueueSwitchService;
 import com.haier.mailcenter.service.SendMailService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -29,10 +30,17 @@ public class MailTaskController {
     private SendMailService sendMailService;
     @Autowired
     private MailTaskQueueService mailTaskQueueService;
+    @Autowired
+    private MailTaskQueueSwitchService mailTaskQueueSwitchService;
 
+    @ApiOperation(value = "新增邮件任务", notes = "通过校验参数后，将任务添加至队列")
     @PostMapping("/add")
     public ResponseEntity<Map<String, Object>> addMailTaskQueue(@RequestBody @Valid SendMailDto sendMailDto) {
-        ResponseEntity<Map<String, Object>> result = ResponseEntity.ok(ResponseMap.assembleResultMessage(0, "成功添加任务", ""));
+        ResponseEntity<Map<String, Object>> result = ResponseEntity.ok(ResponseMap.assembleResultMessage(200, "成功添加任务"));
+        if (!mailTaskQueueSwitchService.isQueueSwitchOpen()) {
+            log.info("队列总开关关闭，暂时无法新增任务");
+            return ResponseEntity.ok(ResponseMap.assembleResultMessage(500, "队列总开关关闭，暂时无法新增任务"));
+        }
         try {
             sendMailService.sendMailNow(sendMailDto);
         } catch (Exception ce) {
@@ -56,6 +64,7 @@ public class MailTaskController {
         return ResponseEntity.ok(mailTaskQueueService.getMailTaskQueueBak());
     }
 
+    @ApiOperation(value = "查询单条任务", notes = "根据任务TaskID查询任务")
     @GetMapping("/{id:\\w+}")
     public ResponseEntity<MailSendTask> getMailTaskById(@PathVariable String id) {
         return ResponseEntity.ok(mailTaskQueueService.getMailTask(id));
