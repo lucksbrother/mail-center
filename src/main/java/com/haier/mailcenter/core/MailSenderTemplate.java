@@ -44,6 +44,8 @@ public abstract class MailSenderTemplate {
     protected MailSendLogService mailSendLogService;
     @Autowired
     protected MailTaskQueueService mailTaskQueueService;
+    @Autowired
+    protected AuthService authService;
 
     private final List<String> formatErrorList = new ArrayList<>();
     private final List<String> blackAddressList = new ArrayList<>();
@@ -57,7 +59,7 @@ public abstract class MailSenderTemplate {
      */
     public final Map<String, Object> sendMail(SendMailDto sendMailDto) throws Exception {
         //1、检查邮件地址-不为空-不超量-不非法格式-排除黑名单
-        String[] targetList = checkMailAddress(sendMailDto.getMailAddresses());
+        String[] targetList = checkMailAddress(sendMailDto.getMailAddresses(),sendMailDto.getClientSecret());
         //2、组装模版+变量为邮件内容
         String content = assembleMessageContent(sendMailDto.getTemplateId(), sendMailDto.getVariableMap());
         //3、指定发件人邮箱
@@ -76,7 +78,7 @@ public abstract class MailSenderTemplate {
      * @param mailAddresses 邮件地址
      * @throws CheckMailAddressException 自定义异常
      */
-    private String[] checkMailAddress(List<String> mailAddresses) throws CheckMailAddressException {
+    private String[] checkMailAddress(List<String> mailAddresses,String clientSecret) throws CheckMailAddressException {
         if (CollectionUtils.isEmpty(mailAddresses)) {
             throw new CheckMailAddressException("目标地址不能为空");
         }
@@ -85,16 +87,21 @@ public abstract class MailSenderTemplate {
         }
         formatErrorList.clear();
         blackAddressList.clear();
-        List<BlackList> blackLists = blackListService.list();
+        ClientInfo clientInfo = authService.getClientInfo(clientSecret);
+        QueryWrapper<BlackList> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("client_id", clientInfo.getId()).or().eq("client_id", 0);
+        List<BlackList> blackLists = blackListService.list(queryWrapper);
         for (String mailAddress : mailAddresses) {
             if (!mailAddress.matches("[\\w!#$%&'*+/=?^_`{|}~-]+(?:\\.[\\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\\w](?:[\\w-]*[\\w])?\\.)+[\\w](?:[\\w-]*[\\w])?")) {
                 formatErrorList.add(mailAddress);
                 log.info("格式不正确：{}", mailAddress);
                 continue;
             }
-            if (blackLists.stream().allMatch(blackList -> blackList.getMailAddress().equals(mailAddress))) {
-                blackAddressList.add(mailAddress);
-                log.info("监测到黑名单地址：{}", mailAddress);
+            for (BlackList blackList : blackLists) {
+                if (mailAddress.equalsIgnoreCase(blackList.getMailAddress())) {
+                    blackAddressList.add(mailAddress);
+                    log.info("监测到黑名单地址：{}", mailAddress);
+                }
             }
         }
         mailAddresses.removeAll(formatErrorList);
@@ -129,19 +136,19 @@ public abstract class MailSenderTemplate {
         return clientInfo.getFromAddress();
     }
 
-    public Map<String, Object> send(String[] targetList, String from, String subject, String content) {
+    public Map<String, Object> send(MailSendTask mailSendTask) {
         Map<String, Object> result = assembleResultMessage(200, "邮件发送成功", "");
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
             //邮件地址
-            helper.setTo(targetList);
+            helper.setTo(mailSendTask.getTargetList());
             //发送人地址
-            helper.setFrom(from);
+            helper.setFrom(mailSendTask.getFrom());
             //邮件标题
-            helper.setSubject(subject);
+            helper.setSubject(mailSendTask.getSubject());
             //邮件内容
-            helper.setText(content, true);
+            helper.setText(mailSendTask.getContent(), true);
             javaMailSender.send(message);
         } catch (MailSendException me) {
             log.error("邮件发送异常:{}", me.getMessageExceptions()[0].getMessage());
@@ -150,17 +157,19 @@ public abstract class MailSenderTemplate {
             log.error("邮件发送异常:{}", mge.getLocalizedMessage());
             result = assembleResultMessage(500, "邮件发送失败", mge.getLocalizedMessage());
         } finally {
-            recordSendMailLog(targetList, from, content, result);
+            recordSendMailLog(mailSendTask, result);
         }
         log.info("发送邮件完毕");
         return result;
     }
 
-    private void recordSendMailLog(String[] targetList, String from, String content, Map<String, Object> result) {
+    private void recordSendMailLog(MailSendTask mailSendTask, Map<String, Object> result) {
         MailSendLog mailSendLog = new MailSendLog();
-        mailSendLog.setSendAddress(Arrays.toString(targetList));
-        mailSendLog.setSendFrom(from);
-        mailSendLog.setSendContent(content);
+        mailSendLog.setTaskId(mailSendTask.getTaskId());
+        mailSendLog.setTaskBy(mailSendTask.getCreateBy());
+        mailSendLog.setSendAddress(Arrays.toString(mailSendTask.getTargetList()));
+        mailSendLog.setSendFrom(mailSendTask.getFrom());
+        mailSendLog.setSendContent(mailSendTask.getContent());
         mailSendLog.setSendTime(new Date());
         if (result.get("error").equals(200)) {
             mailSendLog.setSendStatus(1);

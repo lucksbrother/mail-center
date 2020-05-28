@@ -37,12 +37,13 @@ public class TaskExecutionMonitor extends MailSenderTemplate implements Applicat
                 MailSendTask tempTask = mailTaskQueueService.rightPopAndLeftPush();
                 if (tempTask != null) {
                     log.info("接收到邮件任务,ID:{},Name:{}", tempTask.getTaskId(), tempTask.getTaskName());
+                    //TODO 此处未开发完毕，需要增加客户端开关
                     if (tempTask.getCreateBy().equalsIgnoreCase("123")) {
                         //如果队列客户端开关关闭，即：createBy 包含于 客户端名称列表 ，则将任务放回队列尾端
                         mailTaskQueueService.addMailTaskQueue(tempTask);
                     }
                     log.info("开始执行发送邮件");
-                    send(tempTask.getTargetList(), tempTask.getFrom(), tempTask.getSubject(), tempTask.getContent());
+                    send(tempTask);
                     mailTaskQueueService.removeBakQueueTask(tempTask);
                     log.info("结束执行发送邮件");
                 }

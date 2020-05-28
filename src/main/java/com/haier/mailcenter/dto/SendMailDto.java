@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -27,4 +28,8 @@ public class SendMailDto implements Serializable {
     private String clientSecret;
     @ApiModelProperty(example = "邮箱主题")
     private String subject;
+    @ApiModelProperty(example = "*/30 * * * * ?")
+    private String cron;
+    @ApiModelProperty(example = "1590660233")
+    private Date delay;
 }

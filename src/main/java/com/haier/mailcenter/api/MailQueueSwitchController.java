@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
-@Api(tags = {"队列开关"})
+@Api(tags = {"客户端管理开关"})
 @RestController
 @RequestMapping("/queueSwitch")
 public class MailQueueSwitchController {

@@ -2,18 +2,19 @@ package com.haier.mailcenter.api;
 
 import com.haier.mailcenter.common.ResponseMap;
 import com.haier.mailcenter.dto.SendMailDto;
+import com.haier.mailcenter.model.ClientInfo;
 import com.haier.mailcenter.model.MailSendTask;
-import com.haier.mailcenter.service.MailTaskQueueService;
-import com.haier.mailcenter.service.MailTaskQueueSwitchService;
-import com.haier.mailcenter.service.SendMailService;
+import com.haier.mailcenter.service.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.quartz.ee.jmx.jboss.QuartzService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +33,10 @@ public class MailTaskController {
     private MailTaskQueueService mailTaskQueueService;
     @Autowired
     private MailTaskQueueSwitchService mailTaskQueueSwitchService;
+    @Autowired
+    private QuartzJobService quartzJobService;
+    @Autowired
+    private AuthService authService;
 
     @ApiOperation(value = "新增邮件任务", notes = "通过校验参数后，将任务添加至队列")
     @PostMapping("/add")
@@ -43,6 +48,42 @@ public class MailTaskController {
         }
         try {
             sendMailService.sendMailNow(sendMailDto);
+        } catch (Exception ce) {
+            ce.printStackTrace();
+            log.error("接口调用异常：{}", ce.getMessage());
+            result = ResponseEntity.status(400).body(ResponseMap.assembleResultMessage(400, ce.getMessage(), ce.getLocalizedMessage()));
+        }
+        return result;
+    }
+
+    @ApiOperation(value = "新增邮件任务按周期定时", notes = "通过校验参数后，将任务添加至定时任务调度器，必须传入cron表达式")
+    @PostMapping("/addWithCron")
+    public ResponseEntity<Map<String, Object>> addMailTaskWithCron(@RequestBody @Valid SendMailDto sendMailDto) {
+        ResponseEntity<Map<String, Object>> result = ResponseEntity.ok(ResponseMap.assembleResultMessage(200, "成功添加任务"));
+        if (!mailTaskQueueSwitchService.isQueueSwitchOpen()) {
+            log.info("队列总开关关闭，暂时无法新增任务");
+            return ResponseEntity.ok(ResponseMap.assembleResultMessage(500, "队列总开关关闭，暂时无法新增任务"));
+        }
+        try {
+            quartzJobService.addJobWithCron(sendMailDto);
+        } catch (Exception ce) {
+            ce.printStackTrace();
+            log.error("接口调用异常：{}", ce.getMessage());
+            result = ResponseEntity.status(400).body(ResponseMap.assembleResultMessage(400, ce.getMessage(), ce.getLocalizedMessage()));
+        }
+        return result;
+    }
+
+    @ApiOperation(value = "新增邮件任务", notes = "通过校验参数后，将任务添加至队列")
+    @PostMapping("/addWithDelay")
+    public ResponseEntity<Map<String, Object>> addMailTaskWithDelay(@RequestBody @Valid SendMailDto sendMailDto) {
+        ResponseEntity<Map<String, Object>> result = ResponseEntity.ok(ResponseMap.assembleResultMessage(200, "成功添加任务"));
+        if (!mailTaskQueueSwitchService.isQueueSwitchOpen()) {
+            log.info("队列总开关关闭，暂时无法新增任务");
+            return ResponseEntity.ok(ResponseMap.assembleResultMessage(500, "队列总开关关闭，暂时无法新增任务"));
+        }
+        try {
+            quartzJobService.addJobWithDelay(sendMailDto);
         } catch (Exception ce) {
             ce.printStackTrace();
             log.error("接口调用异常：{}", ce.getMessage());

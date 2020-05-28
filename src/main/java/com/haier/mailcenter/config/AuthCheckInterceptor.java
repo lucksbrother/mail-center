@@ -21,7 +21,7 @@ public class AuthCheckInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String secret = request.getParameter("clientSecret");
+        String secret = request.getHeader("clientSecret");
         log.info("检查客户端：{}权限", secret);
         if (!StringUtils.isEmpty(secret) && authService.hasAuthority(secret)) {
             return true;

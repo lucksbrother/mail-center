@@ -10,8 +10,43 @@ spring:
   # Redis.
   redis:
     # 配置格式变成了Duration类型
-    timeout: 3000ms
     host: 10.135.16.164
     database: 2
     password: LIMITREE-dev
     port: 6386
+    timeout: 30000
+  quartz:
+    #相关属性配置
+    properties:
+      org:
+        quartz:
+          scheduler:
+            #调度器实例名称
+            instanceName: clusteredScheduler
+            #调度器实例编号自动生成
+            instanceId: AUTO
+          jobStore:
+            class: org.quartz.impl.jdbcjobstore.JobStoreTX
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+            # 自动生成表前缀
+            tablePrefix: QRTZ_
+            # 开启分布式部署
+            isClustered: true
+            #分布式节点有效性检查时间间隔，单位：毫秒
+            clusterCheckinInterval: 10000
+            #配置是否使用
+            useProperties: false
+          threadPool:
+            #线程池实现类
+            class: org.quartz.simpl.SimpleThreadPool
+            #执行最大并发线程数量
+            threadCount: 10
+            #线程优先级
+            threadPriority: 5
+            #配置是否启动自动加载数据库内的定时任务，默认true
+            threadsInheritContextClassLoaderOfInitializingThread: true
+    #数据库方式
+    job-store-type: jdbc
+    #初始化表结构: 第一次执行时 使用 always 做为初始化， 使用后更改为never （重要：否则会重制数据库）
+    jdbc:
+      initialize-schema: never
